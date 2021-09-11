@@ -39,4 +39,5 @@ export class Exercise3Service {
             return (" not a prime number");
     }
 
+
 }
