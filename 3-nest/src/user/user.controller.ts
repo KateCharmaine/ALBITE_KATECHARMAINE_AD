@@ -17,34 +17,34 @@ export class UserController {
     }
 
     @Get('/:id')
-    getUserID(@Param("id") id: number){
+    getUserID(@Param("id") id: string){
         return this.userService.getUserID(id);
     }
 
     @Put('/:id')
-    replaceValuePut(@Param("id") id:number, @Body() body: any) {
-        return this.userService.replaceValuePut(id,body); 
+    replaceValuePut(@Param("id") id: string, @Body() body: any) {
+        return this.userService.replaceValuePut(id, body); 
     }
 
     @Patch('/:id')
-    replaceValuePatch(@Param("id") id:number, @Body() body: any) {
+    replaceValuePatch(@Param("id") id:string, @Body() body: any) {
         return this.userService.replaceValuePatch(id,body);
     }
 
 
     @Delete('/:id')
-    deleteUser(@Param("id") id: number) {
+    deleteUser(@Param("id") id: string) {
         return this.userService.deleteUser(id);
     }
 
     @Post("/login")
-    login(@Body("email") email:string , @Body("password") password:string){
-        return this.userService.login(email,password);
+    login(@Body() login: any){
+        return this.userService.login(login);
     }
 
     @Get("search/:term")
-    searchUser(@Body() body:any){
-        return this.userService.searchUser(body);
+    searchUser(@Param("term") term: string){
+        return this.userService.searchUser(term);
     }
 }
 

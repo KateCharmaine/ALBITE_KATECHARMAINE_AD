@@ -1,35 +1,67 @@
 import { Injectable } from '@nestjs/common';
+import { debug } from 'console';
+import { truncateSync } from 'fs';
+import { CRUDReturn } from './crud_return.interface';
+import { Helper } from './helper';
 import { User } from './user.model';
 
+const DEBUG: boolean = true;
 @Injectable()
 export class UserService {
 
-    private users: Map<number,User> = new Map<number,User>();
+    private users: Map<string,User> = new Map<string,User>();
+    id: string;
     email: string;
     password: string;
 
     constructor(){
-        this.populate();
+        this.users = Helper.populate();
     }
 
-    populate(){
-        
-        this.users.set(1,new User(1,"Wilfredo Quitara",18,"Wilfredo.Quitara@gmail.com", "123456"));
-        this.users.set(2,new User(2,"Kate Sasan",16,"Kate.Sasan@gmail.com", "1234567"));
-        this.users.set(3,new User(3,"Maegan Chu",17,"Maegan.Chu@gmail.com", "1234568"));
-        this.users.set(4,new User(4,"Shannen Loyola",18,"Shannen.Loyola@gmail.com", "1234569"));
-    }
-
-    register(user:any){
-        var newUser:User ; 
-        newUser = new User(user.id, user.name, user.age, user.email, user.password);
-        if(this.users.set(user.id, newUser)){
-            this.logAllUsers();
-            console.log("Thank you for registering!\n Account has been added\n");
+    login(login: any):CRUDReturn {
+        for(const user of this.users.values()){
+           if(user.toJson().email == login.email)
+            return user.login(login.password);
         }
-        else console.log("Sorry, account cannot be added!");
-        
+          return  {
+              success:false, 
+              data: `Login Fail, Email does not match`
+        };     
     }
+
+
+    register(body:any): CRUDReturn {
+        try {
+            var validBodyPut: {valid: boolean; data:string } = Helper.validBodyPut(body);
+            if (validBodyPut.valid) {
+                if (!this.emailExists(body.email)){
+                    var newUser: User = new User(
+                        body.name,
+                        body.age,
+                        body.email,
+                        body.password,
+                    );
+                    if (this.saveToDB(newUser)){
+                        if (debug) this.logAllUsers();
+                        return {
+                            success: true,
+                            data: newUser.toJson(),
+                        };
+                    } else {
+                        throw new Error('generic database error');
+                    }
+                } else {
+                    throw new Error (`${body.email} is already in use by another user`);
+                }           
+        }else {
+            throw new Error(validBodyPut.data);
+        }
+    } catch (error) {
+        console.log(error.message);
+        return {success: false,data: `Error adding account, ${error.message}`};
+    }
+}
+        
 
     logAllUsers(){
         for(const[key,user] of this.users.entries()){
@@ -43,52 +75,160 @@ export class UserService {
         for(const user of this.users.values()){
             populateData.push(user.toJson());
         }
-        return populateData;
+        return {
+            success: true, data: populateData,
+        }
     }
 
-    getUserID(id:number){
+    getUserID(id:string): CRUDReturn {
         if (this.users.has(id)) {
-            this.users.get(id).toJson()
-            return console.log(id);
+            return { success: true, data: this.users.get(id).toJson() };
+        } else 
+            return {
+                success: false,
+                data: `User ${id} is not in database`,
+            };
+    }
+
+    replaceValuePut(id:string, body: any):CRUDReturn{
+        try{
+        var replace: {valid:boolean;data:string} = Helper.validBodyPut(body);
+        if(replace.valid){
+            for(const replaceValues of this.users.values()){
+                if(id == replaceValues.toJson().id){
+                  if(!this.emailExists(body.email) || body.email == replaceValues.toJson().email){
+                          if(replaceValues?.replaceValues(body)){
+                          return {
+                              success: true,
+                              data: replaceValues.toJson()
+                            };
+                        }
+                        return {
+                            success: false, 
+                            data: 'Error'
+                        };                     
+                  }
+                  else
+                  {
+                    throw new Error(`${body.email} is already used.`);
+                  }
+                }
+              }
+              throw new Error(`User ${id} does not exist in the database`);
+            }
+            else
+            {
+              throw new Error(replace.data);
+            }
+          }
+          catch(error){
+            return {
+                success: false, 
+                data: `${error.message}`
+            };
+          }
+        }
+        
+    replaceValuePatch(id:string, body:any){
+        try{
+            var replace: {valid:boolean;data:string} = Helper.validBodyPatch(body);
+            if(replace.valid){
+                for(const replaceValues of this.users.values()){
+                    if(id == replaceValues.toJson().id){
+                      if(!this.emailExists(body.email) || body.email == replaceValues.toJson().email){
+                              if(replaceValues?.replaceValues(body)){
+                              return {
+                                  success: true,
+                                  data: replaceValues.toJson()
+                                };
+                            }
+                            return {
+                                success: false, 
+                                data: 'Error'
+                            };                     
+                      }
+                      else
+                      {
+                        throw new Error(`${body.email} is already used.`);
+                      }
+                    }
+                  }
+                  throw new Error(`User ${id} does not exist in the database`);
+                }
+                else
+                {
+                  throw new Error(replace.data);
+                }
+              }
+              catch(error){
+                return {
+                    success: false, 
+                    data: `${error.message}`
+                };
+              }
+        }
+
+
+    deleteUser(id:string){
+        try {
+            if (this.users.has(id)) {
+                return { success: true, data: this.users.delete(id) };
+            } else {
+                throw new Error(`${this.id} User doesn't exist!`);
+              }
+            } catch (error) {
+                return { success: false, data: error.message };
         }
     }
 
-    replaceValuePut(id:number, user:any){
-        var newUser:User ; 
-        newUser = new User(user.id, user.name, user.age, user.email, user.password);
-        if(this.users.set(id, newUser)){
-            this.logAllUsers();
-            console.log("Changed Successfully\n");
+
+
+    searchUser(term: string): CRUDReturn{
+        var results: Array<any> = [];
+        for (const user of this.users.values()) {
+            if (user.matches(term)) results.push(user.toJson());
         }
-        else console.log("Sorry, unable to change\n");
+        return {success: results.length > 0, data:results};
     }
 
-    replaceValuePatch(id:number, newUser:any){
-        for(const [num,user] of this.users.entries()){
-            if(user['id'] === id){
-                user["email"] = newUser.email;
-                console.log();
+    saveToDB(user: User): boolean {
+        try  {
+            this.users.set(user.id, user);
+            return this.users.has(user.id);
+        } catch (error) {
+            console.log(error);
+            return false;
+        }
+    }
+
+
+    emailExists(email:string,options?:{exeptionalId:string}){
+        for (const user of this.users.values()){
+            if(user.matches(email)){
+                if (
+                    options?.exeptionalId!=undefined && 
+                    user.matches(options.exeptionalId)
+                )
+                continue;
+                else return true;
             }
         }
+
+        return false;
     }
 
-    deleteUser(id:number){
-        if(this.users.has(id))
-        this.users.delete(id);
-        else console.log(id + "Sorry, does not exist in database!");
-    }
-
-    login(email:string, password:string){
-        if(email === this.email && password === this.password)
-        return console.log(email + password);
-        else
-        return console.log("Sorry! Email and Password Invalid");   
-    }
-
-    searchUser(newUser:any){
-        for(const [number,user] of this.users.entries()){
-            console.log(newUser);
-            user.log();
+    replaceValues(id:string,options?:{exeptionalId:string}){
+        for (const user of this.users.values()){
+            if(user.replaceValues(id)){
+                if (
+                    options?.exeptionalId!= undefined && 
+                    user.replaceValues(options.exeptionalId)
+                )
+                continue;
+                else return true;
+            }
         }
-      }
+        return false;
+    }
+    
 }

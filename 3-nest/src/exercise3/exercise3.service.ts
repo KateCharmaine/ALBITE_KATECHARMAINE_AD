@@ -79,9 +79,6 @@ export class Exercise3Service {
             return (" not a prime number");
     }
 
-<<<<<<< Updated upstream
-
-=======
     //sampleFunction(){
         //var v1:Array<string>;
         //v1 = ["Carl", "Joseph", "Aleczar", "Pete", "Shaina"];
@@ -135,6 +132,5 @@ export class Exercise3Service {
         car.log();
         }
    }
->>>>>>> Stashed changes
 }
 
