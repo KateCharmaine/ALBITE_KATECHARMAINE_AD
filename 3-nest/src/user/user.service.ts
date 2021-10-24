@@ -70,35 +70,42 @@ export class UserService {
         }         
     }
 
-      async getAll(): Promise<CRUDReturn> {
-        var results: Array<any> = [];
-        try {
-            var allUsers = await this.getAllUserObjects();
-            allUsers.forEach((user)=> {
-            results.push(user.toJsonId());
+    async getAll(): Promise<CRUDReturn> {
+      var results: Array<any> = [];
+      try {
+        var allUsers = await this.getAllUserObjects();
+        allUsers.forEach((user) => {
+          results.push(user.toJson());
         });
-          return { success: true, data: results };
-
-        } catch (e) {
-          return { success: false, data: e };
-        }
+        return { success: true, data: results };
+      } catch (e) {
+        return { success: false, data: e };
+      }
     }
-
+  
     async getAllUserObjects(): Promise<Array<User>> {
-        var results: Array<User> = [];
-        try {
-          var dbdata:FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData> = await this.DB.collection("users").get()
-          dbdata.forEach((doc)=>{
-            if(doc.exists){
+      var results: Array<User> = [];
+      try {
+        var dbData: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData> =
+          await this.DB.collection("users").get();
+        dbData.forEach((doc) => {
+          if (doc.exists) {
             var data = doc.data();
-            results.push(new User (data["name"],data["age"],data["email"],data["password"], doc.id));
+            results.push(
+              new User(
+                data["name"],
+                data["age"],
+                data["email"],
+                data["password"],
+                doc.id
+              )
+            );
           }
-        })
-          return results;
-
-        } catch (e) {
-          return null;
-        }
+        });
+        return results;
+      } catch (e) {
+        return null;
+      }
     }
     
     async searchUser(term: string): Promise<CRUDReturn>{

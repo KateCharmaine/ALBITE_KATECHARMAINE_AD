@@ -36,6 +36,24 @@ export class User {
     }
   }
 
+  static async retrieveViaEmail(email: string): Promise<User> {
+    var DB = admin.firestore();
+    var userResults = await DB.collection("users")
+      .where("email", "==", email)
+      .get();
+    if (userResults.empty) return null;
+    for (const doc of userResults.docs) {
+      var data = doc.data();
+      return new User(
+        data["name"],
+        data["age"],
+        data["email"],
+        data["password"],
+        doc.id
+      );
+    }
+  }
+
   async commit(): Promise<CRUDReturn> {
     try {
       var DB = admin.firestore();
@@ -62,7 +80,7 @@ export class User {
         throw new Error(`${this.email} login fail, password does not match`);
       }
     } catch (error) {
-      return { success: false, data: error.message };
+      return { success: false, data: error.message, };
     }
   }
 
@@ -77,6 +95,7 @@ export class User {
 
   replaceValues(body: any): boolean {
     try {
+      var DB = admin.firestore();
       var keys: Array<string> = Helper.describeClass(User);
       keys = Helper.removeItemOnce(keys, 'id');
       for (const key of Object.keys(body)) {
